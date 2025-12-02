@@ -1,20 +1,64 @@
 
 import Link from 'next/link';
-import { getSports, getMatches } from '@/lib/api';
+import { getSports, getMatches, Match } from '@/lib/api';
 import MatchCard from '@/components/MatchCard';
-import { Trophy } from 'lucide-react';
+import { Trophy, Flame, Star } from 'lucide-react';
 import styles from './page.module.css';
 
 export default async function Home() {
   const sports = await getSports();
-  const footballMatches = await getMatches('football');
-  const basketballMatches = await getMatches('basketball');
 
-  const popularFootball = footballMatches.slice(0, 5);
-  const popularBasketball = basketballMatches.slice(0, 5);
+  // Fetch matches for all sports in parallel
+  const allMatchesPromises = sports.map(sport => getMatches(sport.name));
+  const allMatchesResults = await Promise.all(allMatchesPromises);
+
+  let allMatches: Match[] = [];
+  allMatchesResults.forEach((matches) => {
+    if (Array.isArray(matches)) {
+      allMatches = [...allMatches, ...matches];
+    }
+  });
+
+  // Filter Live Matches
+  const liveMatches = allMatches.filter(match => {
+    const status = match.status?.toLowerCase() || '';
+    // Check for common live indicators
+    return status.includes("'") ||
+      status === 'live' ||
+      status === 'ht' ||
+      (status !== 'ns' && status !== 'ft' && status !== 'postponed' && status !== 'cancelled' && !status.includes(':'));
+  });
+
+  // Filter Popular Matches (Upcoming)
+  const popularLeagues = [
+    'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'UEFA Champions League', 'UEFA Europa League',
+    'NBA', 'EuroLeague',
+    'NFL', 'MLB', 'NHL',
+    'Indian Super League', 'Champions League'
+  ];
+
+  const popularMatches = allMatches.filter(match => {
+    // Exclude matches already shown in Live section
+    const isLive = liveMatches.some(m => m.matchId === match.matchId);
+    if (isLive) return false;
+
+    // Exclude finished matches
+    if (match.status === 'FT' || match.status === 'AET' || match.status === 'Pen') return false;
+
+    // Check if league is popular
+    return popularLeagues.some(league => match.league?.includes(league));
+  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) // Sort by time
+    .slice(0, 8); // Show top 8
+
+  // Fallback: if no popular matches found, just show next upcoming matches
+  const displayPopularMatches = popularMatches.length > 0 ? popularMatches : allMatches
+    .filter(m => !liveMatches.some(live => live.matchId === m.matchId) && m.status !== 'FT')
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(0, 8);
 
   return (
     <div className="container py-8">
+      {/* Sports Categories */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>
           <Trophy className={styles.iconGold} /> Sports
@@ -32,42 +76,43 @@ export default async function Home() {
         </div>
       </section>
 
-      {popularFootball.length > 0 && (
+      {/* Popular Live Section */}
+      {liveMatches.length > 0 && (
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
-              ⚽ Popular Football <span className={styles.liveBadge}>Live (0)</span>
+              <Flame className="text-red-500 mr-2" /> Popular Live <span className={styles.liveBadge}>Live ({liveMatches.length})</span>
             </h2>
-            <div className={styles.navButtons}>
-              <button className={styles.navButton}>←</button>
-              <button className={styles.navButton}>→</button>
-            </div>
           </div>
           <div className={styles.matchesGrid}>
-            {popularFootball.map((match) => (
+            {liveMatches.map((match) => (
               <MatchCard key={match.matchId} match={match} />
             ))}
           </div>
         </section>
       )}
 
-      {popularBasketball.length > 0 && (
+      {/* Popular Matches Section */}
+      {displayPopularMatches.length > 0 && (
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
-              🏀 Popular Basketball <span className={styles.liveBadge}>Live (0)</span>
+              <Star className="text-yellow-400 mr-2" /> Popular Matches
             </h2>
-            <div className={styles.navButtons}>
-              <button className={styles.navButton}>←</button>
-              <button className={styles.navButton}>→</button>
-            </div>
           </div>
           <div className={styles.matchesGrid}>
-            {popularBasketball.map((match) => (
+            {displayPopularMatches.map((match) => (
               <MatchCard key={match.matchId} match={match} />
             ))}
           </div>
         </section>
+      )}
+
+      {/* If no matches at all */}
+      {liveMatches.length === 0 && displayPopularMatches.length === 0 && (
+        <div className="text-center py-12 text-gray-400">
+          <p>No matches available at the moment.</p>
+        </div>
       )}
     </div>
   );
