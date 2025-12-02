@@ -51,5 +51,10 @@ Click **Save and Deploy**. Cloudflare will clone your repo, install dependencies
 
 ## Troubleshooting
 
+-   **Dependency Conflicts**: If you see errors like `ERESOLVE could not resolve` or peer dependency issues, you can try setting an environment variable in Cloudflare Pages:
+    -   **Variable name**: `NPM_FLAGS`
+    -   **Value**: `--legacy-peer-deps`
+    This forces the installer to ignore peer dependency conflicts.
+
 -   **Node.js Compatibility**: If you encounter errors related to Node.js APIs, ensure you are not using server-only modules that are unsupported on the Edge. The `next-on-pages` adapter handles most standard cases.
 -   **Image Optimization**: Next.js Image Optimization (`<Image />`) works differently on Cloudflare. You might need to disable it or use a custom loader if images fail to load. In this project, we used standard `<img>` tags for simplicity, so it should work fine.
