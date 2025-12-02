@@ -60,7 +60,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
 
             <div className={styles.details}>
                 <div className={styles.detailItem}>
-                    <Shield size={20} className="text-yellow-500" />
+                    <Shield size={20} className="text-yellow-600" />
                     <span>{match.league}</span>
                 </div>
                 {match.venue && (
