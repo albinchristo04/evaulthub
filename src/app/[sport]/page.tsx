@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { format, addDays, subDays, parseISO } from 'date-fns';
 import styles from './page.module.css';
 
+export const runtime = 'edge';
+
 interface SportPageProps {
     params: Promise<{
         sport: string;

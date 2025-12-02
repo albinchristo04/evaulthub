@@ -5,6 +5,8 @@ import styles from './page.module.css';
 import { Shield, Calendar, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 
+export const runtime = 'edge';
+
 interface MatchPageProps {
     params: Promise<{
         id: string;
