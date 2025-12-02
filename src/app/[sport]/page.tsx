@@ -6,17 +6,18 @@ import { format, addDays, subDays, parseISO } from 'date-fns';
 import styles from './page.module.css';
 
 interface SportPageProps {
-    params: {
+    params: Promise<{
         sport: string;
-    };
-    searchParams: {
+    }>;
+    searchParams: Promise<{
         date?: string;
-    };
+    }>;
 }
 
 export default async function SportPage({ params, searchParams }: SportPageProps) {
-    const sport = params.sport;
-    const dateStr = searchParams.date || format(new Date(), 'yyyy-MM-dd');
+    const { sport } = await params;
+    const { date } = await searchParams;
+    const dateStr = date || format(new Date(), 'yyyy-MM-dd');
     const matches = await getMatches(sport, dateStr);
 
     const currentDate = parseISO(dateStr);

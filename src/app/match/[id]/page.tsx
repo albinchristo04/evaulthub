@@ -6,13 +6,14 @@ import { Shield, Calendar, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface MatchPageProps {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
 export default async function MatchPage({ params }: MatchPageProps) {
-    const match = await getMatchDetails(params.id);
+    const { id } = await params;
+    const match = await getMatchDetails(id);
 
     if (!match) {
         notFound();
