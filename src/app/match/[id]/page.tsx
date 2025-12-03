@@ -8,6 +8,8 @@ import { Shield, Calendar, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { use, useState, useEffect } from 'react';
 
+export const runtime = 'edge';
+
 interface MatchPageProps {
     params: Promise<{
         id: string;

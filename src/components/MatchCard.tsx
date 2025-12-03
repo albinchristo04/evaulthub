@@ -15,39 +15,70 @@ export default function MatchCard({ match }: MatchCardProps) {
     const [localTime, setLocalTime] = useState<string>('');
     const [isLive, setIsLive] = useState(false);
 
+    const [timeUntilMatch, setTimeUntilMatch] = useState<string>('');
+
     useEffect(() => {
         // Use timestamp if available for accurate time, otherwise fallback to date string
-        // Assuming timestamp is in seconds (standard Unix timestamp)
         let date: Date;
         if (match.timestamp) {
             // Check if timestamp is in seconds or milliseconds
-            // 10000000000 is roughly year 2286, so if it's less than that, it's likely seconds
             const timestamp = match.timestamp < 10000000000 ? match.timestamp * 1000 : match.timestamp;
             date = new Date(timestamp);
         } else {
-            // If date string is provided, we assume it might be in EST as per user report
-            // But if it's ISO format it should be fine. 
-            // If it's "YYYY-MM-DD HH:MM:SS" without timezone, and we know it's EST:
-            const dateStr = match.date;
-            if (dateStr && !dateStr.includes('Z') && !dateStr.includes('+') && !dateStr.includes('-')) {
-                // Append EST offset if it's a plain string (rough fix)
-                // EST is UTC-5. 
-                date = new Date(`${dateStr} -05:00`);
-            } else {
-                date = new Date(match.date);
-            }
+            date = new Date(match.date);
         }
 
         setLocalTime(date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 
-        // Simple check for live status based on common API responses
+        // More accurate live status detection
         const status = match.status?.toLowerCase() || '';
-        const isLiveStatus = status.includes("'") ||
+        const currentMinute = match.currentMinute?.toLowerCase() || '';
+
+        // A match is live if:
+        // 1. Status is explicitly "live", "in", or "ht" (halftime)
+        // 2. currentMinute contains a minute marker like "45'" or "90+2'"
+        // 3. Status contains a minute marker
+        const hasMinuteMarker = (str: string) => /\d+['′]/.test(str);
+        const isLiveStatus =
             status === 'live' ||
+            status === 'in' ||
             status === 'ht' ||
-            (status !== 'ns' && status !== 'ft' && status !== 'postponed' && status !== 'cancelled' && !status.includes(':'));
+            hasMinuteMarker(status) ||
+            hasMinuteMarker(currentMinute);
+
         setIsLive(isLiveStatus);
-    }, [match.date, match.status, match.timestamp]);
+
+        // Calculate time until match for upcoming matches
+        if (!isLiveStatus && status !== 'ft' && status !== 'post') {
+            const updateCountdown = () => {
+                const now = new Date().getTime();
+                const matchTime = date.getTime();
+                const diff = matchTime - now;
+
+                if (diff > 0) {
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+                    if (days > 0) {
+                        setTimeUntilMatch(`in ${days}d ${hours}h`);
+                    } else if (hours > 0) {
+                        setTimeUntilMatch(`in ${hours}h ${minutes}m`);
+                    } else if (minutes > 0) {
+                        setTimeUntilMatch(`in ${minutes}m`);
+                    } else {
+                        setTimeUntilMatch('Starting soon');
+                    }
+                } else {
+                    setTimeUntilMatch('');
+                }
+            };
+
+            updateCountdown();
+            const interval = setInterval(updateCountdown, 60000); // Update every minute
+            return () => clearInterval(interval);
+        }
+    }, [match.date, match.status, match.timestamp, match.currentMinute]);
 
     return (
         <Link href={`/match/${match.matchId}`} className={styles.card}>
@@ -63,12 +94,16 @@ export default function MatchCard({ match }: MatchCardProps) {
                         {isLive ? (
                             <>
                                 <span className={styles.pulsingDot}></span>
-                                LIVE
+                                {match.currentMinute || 'LIVE'}
+                            </>
+                        ) : match.status === 'FT' || match.status === 'post' ? (
+                            <>
+                                FT
                             </>
                         ) : (
                             <>
                                 <Clock size={12} />
-                                {localTime || match.status}
+                                {timeUntilMatch || localTime}
                             </>
                         )}
                     </div>
