@@ -84,13 +84,13 @@ export default function MatchCard({ match }: MatchCardProps) {
                 <div className={styles.teamsContainer}>
                     <div className={styles.team}>
                         <div className={styles.logoWrapper}>
-                            {match.teams.home.logoUrl ? (
+                            {match.teams?.home?.logoUrl ? (
                                 <img src={`https://watchfooty.st${match.teams.home.logoUrl}`} alt={match.teams.home.name} className={styles.teamLogo} />
                             ) : (
-                                <div className={styles.logoPlaceholder}>{match.teams.home.name.substring(0, 2)}</div>
+                                <div className={styles.logoPlaceholder}>{match.teams?.home?.name?.substring(0, 2) || 'H'}</div>
                             )}
                         </div>
-                        <span className={styles.teamName}>{match.teams.home.name}</span>
+                        <span className={styles.teamName}>{match.teams?.home?.name || 'Home'}</span>
                     </div>
 
                     <div className={styles.vsContainer}>
@@ -99,13 +99,13 @@ export default function MatchCard({ match }: MatchCardProps) {
 
                     <div className={styles.team}>
                         <div className={styles.logoWrapper}>
-                            {match.teams.away.logoUrl ? (
+                            {match.teams?.away?.logoUrl ? (
                                 <img src={`https://watchfooty.st${match.teams.away.logoUrl}`} alt={match.teams.away.name} className={styles.teamLogo} />
                             ) : (
-                                <div className={styles.logoPlaceholder}>{match.teams.away.name.substring(0, 2)}</div>
+                                <div className={styles.logoPlaceholder}>{match.teams?.away?.name?.substring(0, 2) || 'A'}</div>
                             )}
                         </div>
-                        <span className={styles.teamName}>{match.teams.away.name}</span>
+                        <span className={styles.teamName}>{match.teams?.away?.name || 'Away'}</span>
                     </div>
                 </div>
 
