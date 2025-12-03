@@ -8,6 +8,8 @@
     color: inherit;
     border: 1px solid rgba(255, 255, 255, 0.05);
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 .card:hover {
@@ -27,13 +29,13 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: 0.4;
+    opacity: 0.8;
     transition: transform 0.5s ease;
 }
 
 .card:hover .poster {
     transform: scale(1.05);
-    opacity: 0.3;
+    opacity: 0.7;
 }
 
 .placeholder {
@@ -98,51 +100,30 @@
     }
 }
 
-.teamsOverlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1.5rem;
+.content {
     padding: 1rem;
-    z-index: 1;
-}
-
-.team {
     display: flex;
     flex-direction: column;
-    align-items: center;
     gap: 0.75rem;
     flex: 1;
-    text-align: center;
-}
-
-.logoWrapper {
-    width: 56px;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
-    transition: transform 0.3s ease;
-    text-overflow: ellipsis;
-    color: #fff;
 }
 
 .meta {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.75rem;
     font-size: 0.8rem;
+    margin-bottom: 0.25rem;
 }
 
 .league {
     color: var(--muted);
     font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 70%;
 }
 
 .sportTag {
@@ -151,4 +132,75 @@
     border-radius: 4px;
     font-size: 0.7rem;
     color: rgba(255, 255, 255, 0.7);
+}
+
+.teamsContainer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    text-align: center;
+    min-width: 0;
+}
+
+.logoWrapper {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+    transition: transform 0.3s ease;
+    color: #fff;
+}
+
+.teamLogo {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.logoPlaceholder {
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.teamName {
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--foreground);
+}
+
+.vsContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.5;
+}
+
+.vs {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--muted);
 }

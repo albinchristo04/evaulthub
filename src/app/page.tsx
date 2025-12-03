@@ -29,14 +29,23 @@ export default async function Home() {
       (status !== 'ns' && status !== 'ft' && status !== 'postponed' && status !== 'cancelled' && !status.includes(':'));
   });
 
-  // Filter Popular Matches (Upcoming)
+  // Sort Live Matches: Popular leagues first
   const popularLeagues = [
     'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'UEFA Champions League', 'UEFA Europa League',
     'NBA', 'EuroLeague',
     'NFL', 'MLB', 'NHL',
-    'Indian Super League', 'Champions League'
+    'Indian Super League', 'Champions League', 'ISL'
   ];
 
+  liveMatches.sort((a, b) => {
+    const aPopular = popularLeagues.some(league => a.league?.includes(league));
+    const bPopular = popularLeagues.some(league => b.league?.includes(league));
+    if (aPopular && !bPopular) return -1;
+    if (!aPopular && bPopular) return 1;
+    return 0;
+  });
+
+  // Filter Popular Matches (Upcoming)
   const popularMatches = allMatches.filter(match => {
     // Exclude matches already shown in Live section
     const isLive = liveMatches.some(m => m.matchId === match.matchId);
@@ -48,13 +57,13 @@ export default async function Home() {
     // Check if league is popular
     return popularLeagues.some(league => match.league?.includes(league));
   }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) // Sort by time
-    .slice(0, 8); // Show top 8
+    .slice(0, 12); // Show top 12
 
   // Fallback: if no popular matches found, just show next upcoming matches
   const displayPopularMatches = popularMatches.length > 0 ? popularMatches : allMatches
     .filter(m => !liveMatches.some(live => live.matchId === m.matchId) && m.status !== 'FT')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 8);
+    .slice(0, 12);
 
   return (
     <div className="container py-8">
