@@ -53,7 +53,7 @@ export default function MatchCard({ match }: MatchCardProps) {
         <Link href={`/match/${match.matchId}`} className={styles.card}>
             <div className={styles.imageContainer}>
                 {match.poster ? (
-                    <img src={`https://watchfooty.st${match.poster}`} alt={match.title} className={styles.poster} />
+                    <img src={`https://api.watchfooty.st${match.poster}`} alt={match.title} className={styles.poster} />
                 ) : (
                     <div className={styles.placeholder} />
                 )}
@@ -85,7 +85,7 @@ export default function MatchCard({ match }: MatchCardProps) {
                     <div className={styles.team}>
                         <div className={styles.logoWrapper}>
                             {match.teams?.home?.logoUrl ? (
-                                <img src={`https://watchfooty.st${match.teams.home.logoUrl}`} alt={match.teams.home.name} className={styles.teamLogo} />
+                                <img src={`https://api.watchfooty.st${match.teams.home.logoUrl}`} alt={match.teams.home.name} className={styles.teamLogo} />
                             ) : (
                                 <div className={styles.logoPlaceholder}>{match.teams?.home?.name?.substring(0, 2) || 'H'}</div>
                             )}
@@ -100,7 +100,7 @@ export default function MatchCard({ match }: MatchCardProps) {
                     <div className={styles.team}>
                         <div className={styles.logoWrapper}>
                             {match.teams?.away?.logoUrl ? (
-                                <img src={`https://watchfooty.st${match.teams.away.logoUrl}`} alt={match.teams.away.name} className={styles.teamLogo} />
+                                <img src={`https://api.watchfooty.st${match.teams.away.logoUrl}`} alt={match.teams.away.name} className={styles.teamLogo} />
                             ) : (
                                 <div className={styles.logoPlaceholder}>{match.teams?.away?.name?.substring(0, 2) || 'A'}</div>
                             )}

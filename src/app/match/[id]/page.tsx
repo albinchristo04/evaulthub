@@ -28,7 +28,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
             <div className={styles.matchHeader}>
                 <div className={styles.teams}>
                     <div className={styles.team}>
-                        {match.teams.home.logoUrl && <img src={`https://watchfooty.st${match.teams.home.logoUrl}`} alt={match.teams.home.name} className={styles.teamLogoBig} />}
+                        {match.teams.home.logoUrl && <img src={`https://api.watchfooty.st${match.teams.home.logoUrl}`} alt={match.teams.home.name} className={styles.teamLogoBig} />}
                         <h2 className={styles.teamName}>{match.teams.home.name}</h2>
                     </div>
                     <div className={styles.vsInfo}>
@@ -37,7 +37,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
                         <span className={styles.matchDate}>{format(new Date(match.date), 'MMM d, yyyy')}</span>
                     </div>
                     <div className={styles.team}>
-                        {match.teams.away.logoUrl && <img src={`https://watchfooty.st${match.teams.away.logoUrl}`} alt={match.teams.away.name} className={styles.teamLogoBig} />}
+                        {match.teams.away.logoUrl && <img src={`https://api.watchfooty.st${match.teams.away.logoUrl}`} alt={match.teams.away.name} className={styles.teamLogoBig} />}
                         <h2 className={styles.teamName}>{match.teams.away.name}</h2>
                     </div>
                 </div>
