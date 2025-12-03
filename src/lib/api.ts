@@ -54,7 +54,7 @@ export interface MatchDetails extends Match {
   eventCompetitors?: any[];
 }
 
-const API_BASE = 'https://watchfooty.st/api/v1';
+const API_BASE = 'https://api.watchfooty.st/api/v1';
 
 export async function getSports(): Promise<Sport[]> {
   try {
