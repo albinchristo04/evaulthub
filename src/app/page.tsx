@@ -29,20 +29,37 @@ export default async function Home() {
       (status !== 'ns' && status !== 'ft' && status !== 'postponed' && status !== 'cancelled' && !status.includes(':'));
   });
 
-  // Sort Live Matches: Popular leagues first
+  // Sort Live Matches: Popular leagues and teams first
   const popularLeagues = [
     'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'UEFA Champions League', 'UEFA Europa League',
     'NBA', 'EuroLeague',
     'NFL', 'MLB', 'NHL',
-    'Indian Super League', 'Champions League', 'ISL'
+    'Indian Super League', 'Champions League', 'ISL', 'FIFA Arab Cup'
+  ];
+
+  const popularTeams = [
+    'Real Madrid', 'Barcelona', 'Manchester United', 'Manchester City', 'Liverpool', 'Chelsea', 'Arsenal',
+    'Bayern Munich', 'PSG', 'Juventus', 'AC Milan', 'Inter Milan', 'Atletico Madrid', 'Borussia Dortmund',
+    'Tottenham', 'Ajax', 'Benfica', 'Porto', 'Napoli', 'Roma', 'Lazio', 'Sevilla', 'Valencia',
+    'Lakers', 'Warriors', 'Celtics', 'Heat', 'Bucks', 'Nets', 'Clippers', 'Mavericks',
+    'India', 'Pakistan', 'England', 'Australia', 'South Africa', 'New Zealand', 'West Indies', 'Sri Lanka'
   ];
 
   liveMatches.sort((a, b) => {
-    const aPopular = popularLeagues.some(league => a.league?.includes(league));
-    const bPopular = popularLeagues.some(league => b.league?.includes(league));
-    if (aPopular && !bPopular) return -1;
-    if (!aPopular && bPopular) return 1;
-    return 0;
+    const aPopularLeague = popularLeagues.some(league => a.league?.includes(league));
+    const bPopularLeague = popularLeagues.some(league => b.league?.includes(league));
+    const aPopularTeam = popularTeams.some(team =>
+      a.teams?.home?.name?.includes(team) || a.teams?.away?.name?.includes(team)
+    );
+    const bPopularTeam = popularTeams.some(team =>
+      b.teams?.home?.name?.includes(team) || b.teams?.away?.name?.includes(team)
+    );
+
+    // Prioritize: popular team + popular league > popular team > popular league > others
+    const aScore = (aPopularTeam && aPopularLeague ? 3 : aPopularTeam ? 2 : aPopularLeague ? 1 : 0);
+    const bScore = (bPopularTeam && bPopularLeague ? 3 : bPopularTeam ? 2 : bPopularLeague ? 1 : 0);
+
+    return bScore - aScore;
   });
 
   // Filter Popular Matches (Upcoming)
