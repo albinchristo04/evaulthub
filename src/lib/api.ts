@@ -92,19 +92,29 @@ export async function getMatchDetails(id: string): Promise<MatchDetails | null> 
     // The match details endpoint doesn't include streams, so we need to fetch them
     // from the matches endpoint for the specific sport
     if (matchDetails && matchDetails.sport) {
+      console.log(`Fetching streams for match ${id}, sport: ${matchDetails.sport}`);
       try {
-        const matchesRes = await fetch(`${API_BASE}/matches/${matchDetails.sport}`, { next: { revalidate: 60 } });
+        const matchesRes = await fetch(`${API_BASE}/matches/${matchDetails.sport}?t=${Date.now()}`, { cache: 'no-store' });
         if (matchesRes.ok) {
           const matches = await matchesRes.json();
           const matchWithStreams = matches.find((m: Match) => m.matchId === id);
-          if (matchWithStreams && matchWithStreams.streams) {
-            matchDetails.streams = matchWithStreams.streams;
+          if (matchWithStreams) {
+            console.log(`Found match in list. Streams count: ${matchWithStreams.streams?.length}`);
+            if (matchWithStreams.streams) {
+              matchDetails.streams = matchWithStreams.streams;
+            }
+          } else {
+            console.log(`Match ${id} not found in ${matchDetails.sport} matches list`);
           }
+        } else {
+          console.log(`Failed to fetch matches for sport ${matchDetails.sport}`);
         }
       } catch (error) {
         console.error('Failed to fetch streams:', error);
         // Continue without streams if this fails
       }
+    } else {
+      console.log('Match details or sport missing', matchDetails);
     }
 
     return matchDetails;
