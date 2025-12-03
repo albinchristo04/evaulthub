@@ -1,11 +1,12 @@
 
+'use client';
+
 import { getMatchDetails } from '@/lib/api';
 import { notFound } from 'next/navigation';
 import styles from './page.module.css';
 import { Shield, Calendar, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
-
-export const runtime = 'edge';
+import { use, useState, useEffect } from 'react';
 
 interface MatchPageProps {
     params: Promise<{
@@ -13,15 +14,35 @@ interface MatchPageProps {
     }>;
 }
 
-export default async function MatchPage({ params }: MatchPageProps) {
-    const { id } = await params;
-    const match = await getMatchDetails(id);
+export default function MatchPage({ params }: MatchPageProps) {
+    const { id } = use(params);
+    const [match, setMatch] = useState<any>(null);
+    const [selectedStreamIndex, setSelectedStreamIndex] = useState(0);
+    const [loading, setLoading] = useState(true);
 
-    if (!match) {
-        notFound();
+    // Fetch match details on component mount
+    useEffect(() => {
+        const fetchMatch = async () => {
+            const matchData = await getMatchDetails(id);
+            if (!matchData) {
+                notFound();
+            }
+            setMatch(matchData);
+            setLoading(false);
+        };
+        fetchMatch();
+    }, [id]);
+
+    if (loading || !match) {
+        return (
+            <div className="container py-8">
+                <div className={styles.loading}>Loading match details...</div>
+            </div>
+        );
     }
 
-    const stream = match.streams && match.streams.length > 0 ? match.streams[0] : null;
+    const streams = match.streams || [];
+    const selectedStream = streams[selectedStreamIndex];
 
     return (
         <div className="container py-8">
@@ -43,10 +64,28 @@ export default async function MatchPage({ params }: MatchPageProps) {
                 </div>
             </div>
 
+            {streams.length > 0 && (
+                <div className={styles.streamSelector}>
+                    <span className={styles.streamLabel}>Select Stream:</span>
+                    <div className={styles.streamButtons}>
+                        {streams.map((stream: any, index: number) => (
+                            <button
+                                key={stream.id}
+                                onClick={() => setSelectedStreamIndex(index)}
+                                className={`${styles.streamButton} ${index === selectedStreamIndex ? styles.active : ''}`}
+                            >
+                                Stream {index + 1} ({stream.quality})
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className={styles.playerContainer}>
-                {stream ? (
+                {selectedStream ? (
                     <iframe
-                        src={stream.url}
+                        key={selectedStream.id}
+                        src={selectedStream.url}
                         className={styles.iframe}
                         allowFullScreen
                         scrolling="no"

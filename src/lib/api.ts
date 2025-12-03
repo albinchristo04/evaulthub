@@ -87,8 +87,27 @@ export async function getMatchDetails(id: string): Promise<MatchDetails | null> 
     const res = await fetch(`${API_BASE}/match/${id}`, { next: { revalidate: 60 } });
     if (!res.ok) throw new Error('Failed to fetch match details');
     const data = await res.json();
-    // The API returns an array with one item for match details based on the docs
-    return Array.isArray(data) ? data[0] : data;
+    const matchDetails = Array.isArray(data) ? data[0] : data;
+
+    // The match details endpoint doesn't include streams, so we need to fetch them
+    // from the matches endpoint for the specific sport
+    if (matchDetails && matchDetails.sport) {
+      try {
+        const matchesRes = await fetch(`${API_BASE}/matches/${matchDetails.sport}`, { next: { revalidate: 60 } });
+        if (matchesRes.ok) {
+          const matches = await matchesRes.json();
+          const matchWithStreams = matches.find((m: Match) => m.matchId === id);
+          if (matchWithStreams && matchWithStreams.streams) {
+            matchDetails.streams = matchWithStreams.streams;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch streams:', error);
+        // Continue without streams if this fails
+      }
+    }
+
+    return matchDetails;
   } catch (error) {
     console.error(error);
     return null;

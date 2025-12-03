@@ -107,3 +107,53 @@
     font-size: 1rem;
     font-weight: 500;
 }
+
+.streamSelector {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background-color: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.streamLabel {
+    display: block;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+.streamButtons {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.streamButton {
+    padding: 0.75rem 1.25rem;
+    background-color: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--foreground);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.streamButton:hover {
+    background-color: var(--surface);
+    border-color: var(--primary);
+}
+
+.streamButton.active {
+    background-color: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.loading {
+    text-align: center;
+    padding: 3rem;
+    color: var(--muted);
+    font-size: 1.1rem;
+}
