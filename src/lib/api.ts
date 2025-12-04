@@ -20,6 +20,7 @@ export interface Stream {
   ads: boolean;
 }
 
+
 export interface Match {
   matchId: string;
   title: string;
@@ -55,6 +56,78 @@ export interface MatchDetails extends Match {
 }
 
 const API_BASE = 'https://api.watchfooty.st/api/v1';
+const NEW_SOURCE_URL = 'https://raw.githubusercontent.com/albinchristo04/streameast/refs/heads/main/matches_clean.json';
+
+interface NewMatch {
+  matchId: string;
+  title: string;
+  league: string;
+  start_time: string;
+  teams: {
+    home: { name: string; logo_url: string };
+    away: { name: string; logo_url: string };
+  };
+  score: any;
+  poster_url: string;
+  resolved_streams: { label: string; url: string }[];
+  raw: any;
+}
+
+async function fetchNewMatches(): Promise<NewMatch[]> {
+  try {
+    const res = await fetch(NEW_SOURCE_URL, { next: { revalidate: 60 } });
+    if (!res.ok) throw new Error('Failed to fetch matches from new source');
+    const data = await res.json();
+    return data.matches || [];
+  } catch (error) {
+    console.error('Error fetching new matches:', error);
+    return [];
+  }
+}
+
+function mapNewMatchToMatch(newMatch: NewMatch): Match {
+  const date = new Date(newMatch.start_time);
+  return {
+    matchId: newMatch.matchId,
+    title: newMatch.title,
+    poster: newMatch.poster_url,
+    teams: {
+      home: {
+        name: newMatch.teams.home.name,
+        logoUrl: newMatch.teams.home.logo_url,
+      },
+      away: {
+        name: newMatch.teams.away.name,
+        logoUrl: newMatch.teams.away.logo_url,
+      },
+    },
+    scores: newMatch.score, // Assuming score structure is compatible or null
+    status: newMatch.raw?.status || 'NS', // Fallback to NS if not found
+    currentMinute: newMatch.raw?.currentMinute,
+    currentMinuteNumber: newMatch.raw?.currentMinuteNumber,
+    isEvent: false, // Default
+    date: newMatch.start_time,
+    timestamp: date.getTime() / 1000, // Convert to seconds if needed, or keep ms. Old code checked < 10000000000.
+    league: newMatch.league,
+    leagueLogo: newMatch.raw?.leagueLogo,
+    sport: newMatch.raw?.sport || 'Football', // Default to Football or infer
+    streams: newMatch.resolved_streams.map((s, i) => ({
+      id: `stream-${i}`,
+      url: s.url,
+      quality: s.label,
+      language: 'en', // Default
+      isRedirect: false,
+      nsfw: false,
+      ads: false,
+    })),
+  };
+}
+
+export async function getAllMatches(): Promise<Match[]> {
+  const newMatches = await fetchNewMatches();
+  return newMatches.map(mapNewMatchToMatch);
+}
+
 
 export async function getSports(): Promise<Sport[]> {
   try {
@@ -84,40 +157,20 @@ export async function getMatches(sport: string, date?: string): Promise<Match[]>
 
 export async function getMatchDetails(id: string): Promise<MatchDetails | null> {
   try {
-    const res = await fetch(`${API_BASE}/match/${id}`, { next: { revalidate: 60 } });
-    if (!res.ok) throw new Error('Failed to fetch match details');
-    const data = await res.json();
-    const matchDetails = Array.isArray(data) ? data[0] : data;
+    // Try to find the match in the new source first
+    const allMatches = await getAllMatches();
+    const match = allMatches.find(m => m.matchId === id);
 
-    // The match details endpoint doesn't include streams, so we need to fetch them
-    // from the matches endpoint for the specific sport
-    if (matchDetails && matchDetails.sport) {
-      console.log(`Fetching streams for match ${id}, sport: ${matchDetails.sport}`);
-      try {
-        const matchesRes = await fetch(`${API_BASE}/matches/${matchDetails.sport}?t=${Date.now()}`, { cache: 'no-store' });
-        if (matchesRes.ok) {
-          const matches = await matchesRes.json();
-          const matchWithStreams = matches.find((m: Match) => m.matchId === id);
-          if (matchWithStreams) {
-            console.log(`Found match in list. Streams count: ${matchWithStreams.streams?.length}`);
-            if (matchWithStreams.streams) {
-              matchDetails.streams = matchWithStreams.streams;
-            }
-          } else {
-            console.log(`Match ${id} not found in ${matchDetails.sport} matches list`);
-          }
-        } else {
-          console.log(`Failed to fetch matches for sport ${matchDetails.sport}`);
-        }
-      } catch (error) {
-        console.error('Failed to fetch streams:', error);
-        // Continue without streams if this fails
-      }
-    } else {
-      console.log('Match details or sport missing', matchDetails);
+    if (match) {
+      return {
+        ...match,
+        // Add any missing MatchDetails specific fields if needed
+      };
     }
 
-    return matchDetails;
+    // Fallback to old API if not found (optional, but might be safer to remove if we fully switch)
+    // For now, let's stick to the new source as requested.
+    return null;
   } catch (error) {
     console.error(error);
     return null;

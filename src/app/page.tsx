@@ -1,23 +1,12 @@
 
 import Link from 'next/link';
-import { getSports, getMatches, Match } from '@/lib/api';
+import { getAllMatches, Match } from '@/lib/api';
 import MatchCard from '@/components/MatchCard';
-import { Trophy, Flame, Star } from 'lucide-react';
+import { Flame, Calendar } from 'lucide-react';
 import styles from './page.module.css';
 
 export default async function Home() {
-  const sports = await getSports();
-
-  // Fetch matches for all sports in parallel
-  const allMatchesPromises = sports.map(sport => getMatches(sport.name));
-  const allMatchesResults = await Promise.all(allMatchesPromises);
-
-  let allMatches: Match[] = [];
-  allMatchesResults.forEach((matches) => {
-    if (Array.isArray(matches)) {
-      allMatches = [...allMatches, ...matches];
-    }
-  });
+  const allMatches = await getAllMatches();
 
   // Filter Live Matches
   const liveMatches = allMatches.filter(match => {
@@ -26,7 +15,7 @@ export default async function Home() {
     return status.includes("'") ||
       status === 'live' ||
       status === 'ht' ||
-      (status !== 'ns' && status !== 'ft' && status !== 'postponed' && status !== 'cancelled' && !status.includes(':'));
+      (status !== 'ns' && status !== 'ft' && status !== 'postponed' && status !== 'cancelled' && !status.includes(':') && status !== 'post');
   });
 
   // Sort Live Matches: Popular leagues and teams first
@@ -62,55 +51,30 @@ export default async function Home() {
     return bScore - aScore;
   });
 
-  // Filter Popular Matches (Upcoming)
-  const popularMatches = allMatches.filter(match => {
+  // Upcoming Matches
+  const upcomingMatches = allMatches.filter(match => {
     // Exclude matches already shown in Live section
     const isLive = liveMatches.some(m => m.matchId === match.matchId);
     if (isLive) return false;
 
     // Exclude finished matches
-    if (match.status === 'FT' || match.status === 'AET' || match.status === 'Pen') return false;
+    const status = match.status?.toLowerCase() || '';
+    if (status === 'ft' || status === 'aet' || status === 'pen' || status === 'post') return false;
 
-    // Check if league is popular
-    return popularLeagues.some(league => match.league?.includes(league));
-  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) // Sort by time
-    .slice(0, 12); // Show top 12
-
-  // Fallback: if no popular matches found, just show next upcoming matches
-  const displayPopularMatches = popularMatches.length > 0 ? popularMatches : allMatches
-    .filter(m => !liveMatches.some(live => live.matchId === m.matchId) && m.status !== 'FT')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 12);
+    return true;
+  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return (
     <div className="container py-8">
-      {/* Sports Categories */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>
-          <Trophy className={styles.iconGold} /> Sports
-        </h2>
-        <div className={styles.sportsGrid}>
-          {sports.map((sport) => (
-            <Link
-              key={sport.name}
-              href={`/${sport.name}`}
-              className={styles.sportCard}
-            >
-              <span className={styles.sportName}>{sport.displayName}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Popular Live Section */}
+      {/* Live Section */}
       {liveMatches.length > 0 && (
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
-              <Flame className="text-red-500 mr-2" /> Popular Live <span className={styles.liveBadge}>Live ({liveMatches.length})</span>
+              <Flame className="text-red-500 mr-2" /> Live Matches <span className={styles.liveBadge}>({liveMatches.length})</span>
             </h2>
           </div>
-          <div className={styles.matchesGrid}>
+          <div className={styles.carousel}>
             {liveMatches.map((match) => (
               <MatchCard key={match.matchId} match={match} />
             ))}
@@ -118,16 +82,16 @@ export default async function Home() {
         </section>
       )}
 
-      {/* Popular Matches Section */}
-      {displayPopularMatches.length > 0 && (
+      {/* Upcoming Matches Section */}
+      {upcomingMatches.length > 0 && (
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
-              <Star className="text-yellow-400 mr-2" /> Popular Matches
+              <Calendar className="text-blue-400 mr-2" /> Upcoming Matches
             </h2>
           </div>
-          <div className={styles.matchesGrid}>
-            {displayPopularMatches.map((match) => (
+          <div className={styles.carousel}>
+            {upcomingMatches.map((match) => (
               <MatchCard key={match.matchId} match={match} />
             ))}
           </div>
@@ -135,7 +99,7 @@ export default async function Home() {
       )}
 
       {/* If no matches at all */}
-      {liveMatches.length === 0 && displayPopularMatches.length === 0 && (
+      {liveMatches.length === 0 && upcomingMatches.length === 0 && (
         <div className="text-center py-12 text-gray-400">
           <p>No matches available at the moment.</p>
         </div>
