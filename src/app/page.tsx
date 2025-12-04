@@ -1,12 +1,13 @@
 
 import Link from 'next/link';
-import { getAllMatches, Match } from '@/lib/api';
+import { getAllMatches, getSports, Match } from '@/lib/api';
 import MatchCard from '@/components/MatchCard';
-import { Flame, Calendar } from 'lucide-react';
+import DraggableCarousel from '@/components/DraggableCarousel';
+import { Flame, Calendar, Trophy } from 'lucide-react';
 import styles from './page.module.css';
 
 export default async function Home() {
-  const allMatches = await getAllMatches();
+  const [allMatches, sports] = await Promise.all([getAllMatches(), getSports()]);
 
   // Filter Live Matches
   const liveMatches = allMatches.filter(match => {
@@ -66,6 +67,22 @@ export default async function Home() {
 
   return (
     <div className="container py-8">
+      {/* Sports Categories - Top Column */}
+      <section className={styles.section}>
+        <div className={styles.sportsList}>
+          {sports.map((sport) => (
+            <Link
+              key={sport.name}
+              href={`/${sport.name}`}
+              className={styles.sportPill}
+            >
+              <Trophy size={16} className={styles.iconGold} />
+              <span>{sport.displayName}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* Live Section */}
       {liveMatches.length > 0 && (
         <section className={styles.section}>
@@ -74,11 +91,11 @@ export default async function Home() {
               <Flame className="text-red-500 mr-2" /> Live Matches <span className={styles.liveBadge}>({liveMatches.length})</span>
             </h2>
           </div>
-          <div className={styles.carousel}>
+          <DraggableCarousel>
             {liveMatches.map((match) => (
               <MatchCard key={match.matchId} match={match} />
             ))}
-          </div>
+          </DraggableCarousel>
         </section>
       )}
 
@@ -90,11 +107,11 @@ export default async function Home() {
               <Calendar className="text-blue-400 mr-2" /> Upcoming Matches
             </h2>
           </div>
-          <div className={styles.carousel}>
+          <DraggableCarousel>
             {upcomingMatches.map((match) => (
               <MatchCard key={match.matchId} match={match} />
             ))}
-          </div>
+          </DraggableCarousel>
         </section>
       )}
 
