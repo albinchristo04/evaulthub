@@ -3,51 +3,74 @@ import Link from 'next/link';
 import { getAllMatches, getSports, Match } from '@/lib/api';
 import MatchCard from '@/components/MatchCard';
 import DraggableCarousel from '@/components/DraggableCarousel';
-import { Flame, Calendar, Trophy, Activity } from 'lucide-react';
+import { Flame, Trophy, Activity } from 'lucide-react';
 import styles from './page.module.css';
-import { startOfDay } from 'date-fns';
+import { isAfter, startOfDay, parseISO } from 'date-fns';
 
 export default async function Home() {
   const [allMatches, sports] = await Promise.all([getAllMatches(), getSports()]);
 
-  // Get today's start of day
-  const todayStart = startOfDay(new Date());
+  // Get current time and today's start
+  const now = new Date();
+  const todayStart = startOfDay(now);
 
-  // Filter matches: only today and future, exclude finished matches
+  console.log('Total matches fetched:', allMatches.length);
+
+  // Filter matches: only future matches (not finished)
   const relevantMatches = allMatches.filter(match => {
     // Parse the match date
     let matchDate: Date;
-    if (match.timestamp) {
-      const timestamp = match.timestamp < 10000000000 ? match.timestamp * 1000 : match.timestamp;
-      matchDate = new Date(timestamp);
-    } else {
-      matchDate = new Date(match.date);
+    try {
+      if (match.timestamp) {
+        const timestamp = match.timestamp < 10000000000 ? match.timestamp * 1000 : match.timestamp;
+        matchDate = new Date(timestamp);
+      } else {
+        matchDate = parseISO(match.date);
+      }
+    } catch (e) {
+      console.error('Error parsing date for match:', match.matchId, e);
+      return false;
     }
 
-    // Exclude matches before today
+    // Must be today or later
     if (matchDate < todayStart) {
       return false;
     }
 
-    // Exclude finished matches
-    const status = match.status?.toLowerCase() || '';
-    if (status === 'ft' || status === 'aet' || status === 'pen' || status === 'post' ||
-      status === 'finished' || status === 'cancelled' || status === 'postponed') {
+    // Exclude finished matches based on status
+    const status = match.status?.toLowerCase() || 'ns';
+    const finishedStatuses = ['ft', 'aet', 'pen', 'post', 'finished', 'cancelled', 'postponed', 'abandoned'];
+
+    if (finishedStatuses.includes(status)) {
       return false;
+    }
+
+    // Exclude if match time has passed by more than 2.5 hours (likely finished)
+    const timeDiff = now.getTime() - matchDate.getTime();
+    const hoursElapsed = timeDiff / (1000 * 60 * 60);
+
+    if (hoursElapsed > 2.5 && status === 'ns') {
+      return false; // Match should have started but hasn't, likely cancelled/postponed
     }
 
     return true;
   });
 
+  console.log('Relevant matches (today+):', relevantMatches.length);
+
   // Filter Live Matches
   const liveMatches = relevantMatches.filter(match => {
     const status = match.status?.toLowerCase() || '';
-    return status.includes("'") ||
+    const isLive = status.includes("'") ||
       status === 'live' ||
       status === 'ht' ||
       status === 'in' ||
-      (status !== 'ns' && !status.includes(':'));
+      status.includes('+');
+
+    return isLive;
   });
+
+  console.log('Live matches:', liveMatches.length);
 
   // Helper to sort matches by date
   const sortMatches = (matches: Match[]) => {
@@ -58,13 +81,17 @@ export default async function Home() {
     });
   };
 
-  // Group Upcoming Matches by Sport
+  // Upcoming Matches (not live, not finished)
   const upcomingMatches = relevantMatches.filter(match => {
     const isLive = liveMatches.some(m => m.matchId === match.matchId);
     return !isLive;
   });
 
+  console.log('Upcoming matches:', upcomingMatches.length);
+
+  // Group matches by sport
   const matchesBySport: { [key: string]: Match[] } = {};
+
   upcomingMatches.forEach(match => {
     const sport = match.sport || 'Other';
     if (!matchesBySport[sport]) {
@@ -73,20 +100,27 @@ export default async function Home() {
     matchesBySport[sport].push(match);
   });
 
-  // Prioritize specific sports
-  const prioritySports = ['Football', 'Basketball', 'American Football', 'Ice Hockey', 'Baseball', 'Tennis', 'Cricket'];
-  const sortedSports = Object.keys(matchesBySport).sort((a, b) => {
-    const indexA = prioritySports.indexOf(a);
-    const indexB = prioritySports.indexOf(b);
-    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-    if (indexA !== -1) return -1;
-    if (indexB !== -1) return 1;
-    return a.localeCompare(b);
+  // Log sport distribution
+  Object.keys(matchesBySport).forEach(sport => {
+    console.log(`${sport}: ${matchesBySport[sport].length} matches`);
   });
+
+  // Prioritize specific sports and sort
+  const prioritySports = ['Football', 'Basketball', 'American Football', 'Ice Hockey', 'Baseball', 'Tennis', 'Cricket', 'MMA', 'Golf'];
+  const sortedSports = Object.keys(matchesBySport)
+    .filter(sport => matchesBySport[sport].length > 0) // Only show sports with matches
+    .sort((a, b) => {
+      const indexA = prioritySports.indexOf(a);
+      const indexB = prioritySports.indexOf(b);
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      return a.localeCompare(b);
+    });
 
   return (
     <div className="container py-8">
-      {/* Sports Categories - Top Column */}
+      {/* Sports Categories - Top Row */}
       <section className={styles.section}>
         <div className={styles.sportsList}>
           {sports.map((sport) => (
@@ -102,12 +136,14 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Live Section */}
+      {/* Live Matches Section */}
       {liveMatches.length > 0 && (
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
-              <Flame className="text-red-500 mr-2" /> Popular Live <span className={styles.liveBadge}>({liveMatches.length})</span>
+              <Flame className="text-red-500 mr-2" />
+              Live Now
+              <span className={styles.liveBadge}>{liveMatches.length}</span>
             </h2>
           </div>
           <DraggableCarousel>
@@ -118,16 +154,16 @@ export default async function Home() {
         </section>
       )}
 
-      {/* Sports Sections */}
+      {/* Sport Sections */}
       {sortedSports.map(sport => {
         const matches = sortMatches(matchesBySport[sport]);
-        if (matches.length === 0) return null;
 
         return (
           <section key={sport} className={styles.section}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>
-                <Activity className="text-blue-400 mr-2" /> Popular {sport}
+                <Activity className="text-blue-400 mr-2" />
+                {sport}
               </h2>
             </div>
             <DraggableCarousel>
@@ -139,10 +175,12 @@ export default async function Home() {
         );
       })}
 
-      {/* If no matches at all */}
+      {/* Empty State */}
       {liveMatches.length === 0 && upcomingMatches.length === 0 && (
-        <div className="text-center py-12 text-gray-400">
-          <p>No matches available at the moment.</p>
+        <div className={styles.emptyState}>
+          <div className={styles.emoji}>⚽🏀🎾</div>
+          <p className="text-xl font-semibold" style={{ color: 'var(--foreground)' }}>No matches available</p>
+          <p className="text-gray-400">Check back later for upcoming events</p>
         </div>
       )}
     </div>
