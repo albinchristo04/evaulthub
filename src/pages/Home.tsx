@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Flame, Activity } from 'lucide-react';
+import { Flame, Activity, Trophy } from 'lucide-react';
 import MatchCard from '@/components/MatchCard';
 import Carousel from '@/components/Carousel';
 import {
@@ -15,6 +15,7 @@ export default function Home() {
     const [loading, setLoading] = useState(true);
     const [liveMatches, setLiveMatches] = useState<Match[]>([]);
     const [matchesBySport, setMatchesBySport] = useState<Record<string, Match[]>>({});
+    const [allSports, setAllSports] = useState<string[]>([]);
 
     useEffect(() => {
         loadMatches();
@@ -29,8 +30,17 @@ export default function Home() {
             const live = relevant.filter(isLiveMatch);
             const upcoming = relevant.filter(m => !isLiveMatch(m));
 
+            const grouped = groupMatchesBySport(upcoming);
+
+            // Get unique sports from all matches (including live)
+            const sportsSet = new Set<string>();
+            [...live, ...upcoming].forEach(match => {
+                if (match.sport) sportsSet.add(match.sport);
+            });
+
+            setAllSports(Array.from(sportsSet).sort());
             setLiveMatches(live);
-            setMatchesBySport(groupMatchesBySport(upcoming));
+            setMatchesBySport(grouped);
         } catch (error) {
             console.error('Error loading matches:', error);
         } finally {
@@ -58,6 +68,24 @@ export default function Home() {
 
     return (
         <div className="container" style={{ paddingTop: '2rem', paddingBottom: '2rem' }}>
+            {/* Sports Navigation */}
+            {allSports.length > 0 && (
+                <section className={styles.sportsNav}>
+                    <div className={styles.sportsList}>
+                        {allSports.map((sport) => (
+                            <a
+                                key={sport}
+                                href={`#${sport.toLowerCase().replace(/\s+/g, '-')}`}
+                                className={styles.sportPill}
+                            >
+                                <Trophy size={16} />
+                                <span>{sport}</span>
+                            </a>
+                        ))}
+                    </div>
+                </section>
+            )}
+
             {/* Live Matches */}
             {liveMatches.length > 0 && (
                 <section className={styles.section}>
@@ -82,7 +110,11 @@ export default function Home() {
                 if (!matches || matches.length === 0) return null;
 
                 return (
-                    <section key={sport} className={styles.section}>
+                    <section
+                        key={sport}
+                        id={sport.toLowerCase().replace(/\s+/g, '-')}
+                        className={styles.section}
+                    >
                         <div className={styles.sectionHeader}>
                             <h2 className={styles.sectionTitle}>
                                 <Activity size={28} style={{ color: '#818cf8' }} />
