@@ -2,10 +2,10 @@
 # Cloudflare Pages build script
 # This fixes the npm ci optional dependencies issue
 
-echo "Removing package-lock.json to force npm install..."
-rm -f package-lock.json
+echo "Cleaning up previous builds..."
+rm -rf node_modules package-lock.json
 
-echo "Installing dependencies with npm install..."
+echo "Installing dependencies fresh with npm install..."
 npm install
 
 echo "Building the project..."
