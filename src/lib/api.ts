@@ -85,8 +85,64 @@ async function fetchNewMatches(): Promise<NewMatch[]> {
   }
 }
 
+function inferSportFromLeague(league: string): string {
+  const leagueLower = league.toLowerCase();
+
+  // Basketball
+  if (leagueLower.includes('nba') || leagueLower.includes('basketball') ||
+    leagueLower.includes('euroleague') || leagueLower.includes('fiba')) {
+    return 'Basketball';
+  }
+
+  // American Football
+  if (leagueLower.includes('nfl') || leagueLower.includes('ncaaf')) {
+    return 'American Football';
+  }
+
+  // Baseball
+  if (leagueLower.includes('mlb') || leagueLower.includes('baseball')) {
+    return 'Baseball';
+  }
+
+  // Ice Hockey
+  if (leagueLower.includes('nhl') || leagueLower.includes('hockey')) {
+    return 'Ice Hockey';
+  }
+
+  // Tennis
+  if (leagueLower.includes('tennis') || leagueLower.includes('atp') ||
+    leagueLower.includes('wta') || leagueLower.includes('australian open') ||
+    leagueLower.includes('wimbledon') || leagueLower.includes('french open') ||
+    leagueLower.includes('us open')) {
+    return 'Tennis';
+  }
+
+  // Cricket
+  if (leagueLower.includes('cricket') || leagueLower.includes('ipl') ||
+    leagueLower.includes('bbl') || leagueLower.includes('psl')) {
+    return 'Cricket';
+  }
+
+  // MMA/UFC
+  if (leagueLower.includes('ufc') || leagueLower.includes('mma') ||
+    leagueLower.includes('bellator')) {
+    return 'MMA';
+  }
+
+  // Golf
+  if (leagueLower.includes('golf') || leagueLower.includes('pga') ||
+    leagueLower.includes('masters')) {
+    return 'Golf';
+  }
+
+  // Default to Football for everything else (Premier League, La Liga, etc.)
+  return 'Football';
+}
+
 function mapNewMatchToMatch(newMatch: NewMatch): Match {
   const date = new Date(newMatch.start_time);
+  const inferredSport = newMatch.raw?.sport || inferSportFromLeague(newMatch.league);
+
   return {
     matchId: newMatch.matchId,
     title: newMatch.title,
@@ -101,21 +157,21 @@ function mapNewMatchToMatch(newMatch: NewMatch): Match {
         logoUrl: newMatch.teams.away.logo_url,
       },
     },
-    scores: newMatch.score, // Assuming score structure is compatible or null
-    status: newMatch.raw?.status || 'NS', // Fallback to NS if not found
+    scores: newMatch.score,
+    status: newMatch.raw?.status || 'NS',
     currentMinute: newMatch.raw?.currentMinute,
     currentMinuteNumber: newMatch.raw?.currentMinuteNumber,
-    isEvent: false, // Default
+    isEvent: false,
     date: newMatch.start_time,
-    timestamp: date.getTime() / 1000, // Convert to seconds if needed, or keep ms. Old code checked < 10000000000.
+    timestamp: date.getTime() / 1000,
     league: newMatch.league,
     leagueLogo: newMatch.raw?.leagueLogo,
-    sport: newMatch.raw?.sport || 'Football', // Default to Football or infer
+    sport: inferredSport,
     streams: newMatch.resolved_streams.map((s, i) => ({
       id: `stream-${i}`,
       url: s.url,
       quality: s.label,
-      language: 'en', // Default
+      language: 'en',
       isRedirect: false,
       nsfw: false,
       ads: false,

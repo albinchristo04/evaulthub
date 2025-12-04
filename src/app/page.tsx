@@ -5,31 +5,63 @@ import MatchCard from '@/components/MatchCard';
 import DraggableCarousel from '@/components/DraggableCarousel';
 import { Flame, Calendar, Trophy, Activity } from 'lucide-react';
 import styles from './page.module.css';
+import { startOfDay } from 'date-fns';
 
 export default async function Home() {
   const [allMatches, sports] = await Promise.all([getAllMatches(), getSports()]);
 
+  // Get today's start of day
+  const todayStart = startOfDay(new Date());
+
+  // Filter matches: only today and future, exclude finished matches
+  const relevantMatches = allMatches.filter(match => {
+    // Parse the match date
+    let matchDate: Date;
+    if (match.timestamp) {
+      const timestamp = match.timestamp < 10000000000 ? match.timestamp * 1000 : match.timestamp;
+      matchDate = new Date(timestamp);
+    } else {
+      matchDate = new Date(match.date);
+    }
+
+    // Exclude matches before today
+    if (matchDate < todayStart) {
+      return false;
+    }
+
+    // Exclude finished matches
+    const status = match.status?.toLowerCase() || '';
+    if (status === 'ft' || status === 'aet' || status === 'pen' || status === 'post' ||
+      status === 'finished' || status === 'cancelled' || status === 'postponed') {
+      return false;
+    }
+
+    return true;
+  });
+
   // Filter Live Matches
-  const liveMatches = allMatches.filter(match => {
+  const liveMatches = relevantMatches.filter(match => {
     const status = match.status?.toLowerCase() || '';
     return status.includes("'") ||
       status === 'live' ||
       status === 'ht' ||
-      (status !== 'ns' && status !== 'ft' && status !== 'postponed' && status !== 'cancelled' && !status.includes(':') && status !== 'post');
+      status === 'in' ||
+      (status !== 'ns' && !status.includes(':'));
   });
 
-  // Helper to sort matches
+  // Helper to sort matches by date
   const sortMatches = (matches: Match[]) => {
-    return matches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return matches.sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return dateA - dateB;
+    });
   };
 
   // Group Upcoming Matches by Sport
-  const upcomingMatches = allMatches.filter(match => {
+  const upcomingMatches = relevantMatches.filter(match => {
     const isLive = liveMatches.some(m => m.matchId === match.matchId);
-    if (isLive) return false;
-    const status = match.status?.toLowerCase() || '';
-    if (status === 'ft' || status === 'aet' || status === 'pen' || status === 'post') return false;
-    return true;
+    return !isLive;
   });
 
   const matchesBySport: { [key: string]: Match[] } = {};
@@ -42,7 +74,7 @@ export default async function Home() {
   });
 
   // Prioritize specific sports
-  const prioritySports = ['Football', 'Basketball', 'Tennis', 'Cricket', 'Baseball', 'Ice Hockey'];
+  const prioritySports = ['Football', 'Basketball', 'American Football', 'Ice Hockey', 'Baseball', 'Tennis', 'Cricket'];
   const sortedSports = Object.keys(matchesBySport).sort((a, b) => {
     const indexA = prioritySports.indexOf(a);
     const indexB = prioritySports.indexOf(b);
@@ -79,7 +111,7 @@ export default async function Home() {
             </h2>
           </div>
           <DraggableCarousel>
-            {liveMatches.map((match) => (
+            {sortMatches(liveMatches).map((match) => (
               <MatchCard key={match.matchId} match={match} />
             ))}
           </DraggableCarousel>
