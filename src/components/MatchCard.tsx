@@ -5,13 +5,14 @@ import { Match } from '@/lib/api';
 import { Clock } from 'lucide-react';
 import styles from './MatchCard.module.css';
 import { useEffect, useState } from 'react';
+import { format, isToday, isTomorrow } from 'date-fns';
 
 interface MatchCardProps {
     match: Match;
 }
 
 export default function MatchCard({ match }: MatchCardProps) {
-    const [localTime, setLocalTime] = useState<string>('');
+    const [formattedTime, setFormattedTime] = useState<string>('');
     const [isLive, setIsLive] = useState(false);
     const [timeUntilMatch, setTimeUntilMatch] = useState<string>('');
 
@@ -24,7 +25,16 @@ export default function MatchCard({ match }: MatchCardProps) {
             date = new Date(match.date);
         }
 
-        setLocalTime(date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        // Better Time Formatting
+        let timeString = '';
+        if (isToday(date)) {
+            timeString = format(date, 'HH:mm');
+        } else if (isTomorrow(date)) {
+            timeString = `Tmrw ${format(date, 'HH:mm')}`;
+        } else {
+            timeString = format(date, 'MMM d, HH:mm');
+        }
+        setFormattedTime(timeString);
 
         const status = match.status?.toLowerCase() || '';
         const currentMinute = match.currentMinute?.toLowerCase() || '';
@@ -99,7 +109,7 @@ export default function MatchCard({ match }: MatchCardProps) {
                         ) : match.status === 'FT' || match.status === 'post' ? (
                             'FT'
                         ) : (
-                            timeUntilMatch || localTime
+                            timeUntilMatch || formattedTime
                         )}
                     </div>
                 </div>
@@ -110,7 +120,7 @@ export default function MatchCard({ match }: MatchCardProps) {
                 <div className={styles.meta}>
                     <span>{match.sport || 'Sport'}</span>
                     <span className={styles.separator}></span>
-                    <span>{localTime}</span>
+                    <span>{formattedTime}</span>
                 </div>
             </div>
         </Link>

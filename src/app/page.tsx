@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { getAllMatches, getSports, Match } from '@/lib/api';
 import MatchCard from '@/components/MatchCard';
 import DraggableCarousel from '@/components/DraggableCarousel';
-import { Flame, Calendar, Trophy } from 'lucide-react';
+import { Flame, Calendar, Trophy, Activity } from 'lucide-react';
 import styles from './page.module.css';
 
 export default async function Home() {
@@ -12,58 +12,45 @@ export default async function Home() {
   // Filter Live Matches
   const liveMatches = allMatches.filter(match => {
     const status = match.status?.toLowerCase() || '';
-    // Check for common live indicators
     return status.includes("'") ||
       status === 'live' ||
       status === 'ht' ||
       (status !== 'ns' && status !== 'ft' && status !== 'postponed' && status !== 'cancelled' && !status.includes(':') && status !== 'post');
   });
 
-  // Sort Live Matches: Popular leagues and teams first
-  const popularLeagues = [
-    'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'UEFA Champions League', 'UEFA Europa League',
-    'NBA', 'EuroLeague',
-    'NFL', 'MLB', 'NHL',
-    'Indian Super League', 'Champions League', 'ISL', 'FIFA Arab Cup'
-  ];
+  // Helper to sort matches
+  const sortMatches = (matches: Match[]) => {
+    return matches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  };
 
-  const popularTeams = [
-    'Real Madrid', 'Barcelona', 'Manchester United', 'Manchester City', 'Liverpool', 'Chelsea', 'Arsenal',
-    'Bayern Munich', 'PSG', 'Juventus', 'AC Milan', 'Inter Milan', 'Atletico Madrid', 'Borussia Dortmund',
-    'Tottenham', 'Ajax', 'Benfica', 'Porto', 'Napoli', 'Roma', 'Lazio', 'Sevilla', 'Valencia',
-    'Lakers', 'Warriors', 'Celtics', 'Heat', 'Bucks', 'Nets', 'Clippers', 'Mavericks',
-    'India', 'Pakistan', 'England', 'Australia', 'South Africa', 'New Zealand', 'West Indies', 'Sri Lanka'
-  ];
-
-  liveMatches.sort((a, b) => {
-    const aPopularLeague = popularLeagues.some(league => a.league?.includes(league));
-    const bPopularLeague = popularLeagues.some(league => b.league?.includes(league));
-    const aPopularTeam = popularTeams.some(team =>
-      a.teams?.home?.name?.includes(team) || a.teams?.away?.name?.includes(team)
-    );
-    const bPopularTeam = popularTeams.some(team =>
-      b.teams?.home?.name?.includes(team) || b.teams?.away?.name?.includes(team)
-    );
-
-    // Prioritize: popular team + popular league > popular team > popular league > others
-    const aScore = (aPopularTeam && aPopularLeague ? 3 : aPopularTeam ? 2 : aPopularLeague ? 1 : 0);
-    const bScore = (bPopularTeam && bPopularLeague ? 3 : bPopularTeam ? 2 : bPopularLeague ? 1 : 0);
-
-    return bScore - aScore;
-  });
-
-  // Upcoming Matches
+  // Group Upcoming Matches by Sport
   const upcomingMatches = allMatches.filter(match => {
-    // Exclude matches already shown in Live section
     const isLive = liveMatches.some(m => m.matchId === match.matchId);
     if (isLive) return false;
-
-    // Exclude finished matches
     const status = match.status?.toLowerCase() || '';
     if (status === 'ft' || status === 'aet' || status === 'pen' || status === 'post') return false;
-
     return true;
-  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  });
+
+  const matchesBySport: { [key: string]: Match[] } = {};
+  upcomingMatches.forEach(match => {
+    const sport = match.sport || 'Other';
+    if (!matchesBySport[sport]) {
+      matchesBySport[sport] = [];
+    }
+    matchesBySport[sport].push(match);
+  });
+
+  // Prioritize specific sports
+  const prioritySports = ['Football', 'Basketball', 'Tennis', 'Cricket', 'Baseball', 'Ice Hockey'];
+  const sortedSports = Object.keys(matchesBySport).sort((a, b) => {
+    const indexA = prioritySports.indexOf(a);
+    const indexB = prioritySports.indexOf(b);
+    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+    if (indexA !== -1) return -1;
+    if (indexB !== -1) return 1;
+    return a.localeCompare(b);
+  });
 
   return (
     <div className="container py-8">
@@ -88,7 +75,7 @@ export default async function Home() {
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
-              <Flame className="text-red-500 mr-2" /> Live Matches <span className={styles.liveBadge}>({liveMatches.length})</span>
+              <Flame className="text-red-500 mr-2" /> Popular Live <span className={styles.liveBadge}>({liveMatches.length})</span>
             </h2>
           </div>
           <DraggableCarousel>
@@ -99,21 +86,26 @@ export default async function Home() {
         </section>
       )}
 
-      {/* Upcoming Matches Section */}
-      {upcomingMatches.length > 0 && (
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>
-              <Calendar className="text-blue-400 mr-2" /> Upcoming Matches
-            </h2>
-          </div>
-          <DraggableCarousel>
-            {upcomingMatches.map((match) => (
-              <MatchCard key={match.matchId} match={match} />
-            ))}
-          </DraggableCarousel>
-        </section>
-      )}
+      {/* Sports Sections */}
+      {sortedSports.map(sport => {
+        const matches = sortMatches(matchesBySport[sport]);
+        if (matches.length === 0) return null;
+
+        return (
+          <section key={sport} className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>
+                <Activity className="text-blue-400 mr-2" /> Popular {sport}
+              </h2>
+            </div>
+            <DraggableCarousel>
+              {matches.map((match) => (
+                <MatchCard key={match.matchId} match={match} />
+              ))}
+            </DraggableCarousel>
+          </section>
+        );
+      })}
 
       {/* If no matches at all */}
       {liveMatches.length === 0 && upcomingMatches.length === 0 && (
